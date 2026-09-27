@@ -5,6 +5,9 @@ __pycache__/
 *.swo
 .DS_Store
 
+# Local manuscript used to prepare the public README
+/Springer_Nature_LaTeX_Template (1).pdf
+
 # Local environments and secrets
 .env
 .env.*

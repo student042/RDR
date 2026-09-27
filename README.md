@@ -1,73 +1,121 @@
 <div align="center">
 
-# Seek Common Ground While Reserving Differences
+# Role-Dependent Reliability
 
-### Semi-supervised Image-Text Sentiment Recognition
+### Semi-Supervised Image–Text Sentiment Analysis
 
-[![Paper](https://img.shields.io/badge/CVPR-2025-blue)](https://openaccess.thecvf.com/content/CVPR2025/html/Xia_Seek_Common_Ground_While_Reserving_Differences_Semi-Supervised_Image-Text_Sentiment_Recognition_CVPR_2025_paper.html)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.4.1-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Python](https://img.shields.io/badge/Python-3.8-blue?logo=python&logoColor=white)](https://www.python.org/)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
+**Zhen Luo · Wenhua Qian**<br>
+School of Information Science and Engineering, Yunnan University
+
 </div>
 
-This repository contains the official implementation of **SCRD**. This compact
-release documents one experiment only: **MVSA-Single (MVSA-S) under the
-200-label setting**. Other datasets and label budgets from the paper are outside
-the scope of this release.
+This repository implements **Role-Dependent Reliability (RDR)** for
+semi-supervised image–text sentiment analysis. RDR distinguishes two roles of
+unlabeled samples: their reliability as pseudo-label supervision and their
+utility for cross-modal representation learning.
+
+This is a **lightweight research release** focused on the **MVSA-S dataset with
+the nominal 200-label setting**. The datasets, generated MLLM evidence,
+checkpoints, and the five experimental split files are not redistributed.
 
 <div align="center">
-  <img src="./pipeline.png" alt="Overview of the SCRD training paradigm" width="90%"/>
+  <img src="assets/fig1_motivation.png" alt="Motivation for role-dependent reliability" width="88%">
+  <br>
+  <sub>Supervision reliability and representation utility are not equivalent.</sub>
 </div>
 
-## Reported result for this setting
+## Method
 
-| Dataset | Nominal label budget | Labels used by the code | Metric | Reported result |
-|---|---:|---:|---|---:|
-| MVSA-S | 200 | 201 (67 per class) | Accuracy (%) | 64.27 +/- 0.72 |
+RDR is built on the SCRD backbone and contains two complementary training-time
+components:
 
-The paper names this setting **200 labels**. Because MVSA-S has three classes
-and the implementation uses class-balanced sampling, the runnable setting uses
-`201 = 67 x 3` labeled training samples. Throughout this README, **n=200**
-denotes the paper's nominal setting and `--num_labels 201` denotes its actual
-implementation.
+- **Evidence-Calibrated Reliability (ECR)** combines task-model risk with fixed,
+  offline multimodal semantic evidence. It reweights risky pseudo-labels but
+  does not replace the task model's prediction.
+- **Relation-Adaptive Disentanglement (RAD)** separately estimates cross-modal
+  relation trust and representation-refinement demand, then adapts the
+  common/private representation objectives.
+
+Both modules are used only during training. Inference retains the SCRD
+ResNet-50 and BERT prediction backbone and requires no external MLLM call.
+
+<div align="center">
+  <img src="assets/fig2_framework.png" alt="Overview of the RDR framework" width="96%">
+</div>
+
+## MVSA-S results with 200 labels
+
+The main accuracy result is the mean and standard deviation over the five
+predefined SCRD splits reported in the manuscript.
+
+| Method | Accuracy (%) | Improvement over SCRD |
+|---|---:|---:|
+| SCRD | 64.27 ± 0.72 | – |
+| **RDR (ECR + RAD)** | **67.15 ± 0.73** | **+2.88** |
+
+The controlled component analysis under the same label budget reports:
+
+| Variant | Accuracy (%) | Macro-F1 (%) | Weighted-F1 (%) |
+|---|---:|---:|---:|
+| SCRD | 64.27 | 54.18 | 64.20 |
+| + ECR | 66.32 | 57.03 | 67.52 |
+| **+ ECR + RAD** | **67.15** | **58.24** | **67.67** |
+
+<div align="center">
+  <img src="assets/fig3_confusion_matrices.png" alt="Row-normalized confusion matrices of SCRD and RDR" width="92%">
+  <br>
+  <sub>Row-normalized confusion matrices under the middle label budgets. On
+  MVSA-S, negative recall increases from 4.0% to 47.1%.</sub>
+</div>
+
+## Release contents
+
+| Item | Included? | Notes |
+|---|:---:|---|
+| RDR/SCRD training and evaluation code | Yes | `main.py`, `models/`, `datasets/` |
+| Qwen3.5-Omni and GLM-4.6V API entry points | Yes | `tools/` |
+| Paper figures | Yes | PNG and source PDF files in `assets/` |
+| MVSA-S images and text | No | Obtain them under the dataset's terms |
+| Paper's fixed MLLM evidence bank | No | Generate a new bank through the provided API tool |
+| Five predefined labeled split files | No | Required for split-identical reproduction |
+| Pretrained RDR checkpoint | No | Train locally |
+
+Consequently, the current release supports **protocol reproduction**, not an
+exact byte-for-byte or split-identical reproduction of the reported number.
+Newly generated API evidence may also differ from the fixed evidence bank used
+in the paper as hosted models and services change.
 
 ## Environment
 
-The current code imports successfully and exposes the documented command-line
-arguments in the following environment:
-
-- Linux with an NVIDIA GPU and CUDA 12.1
-- Python 3.8.20
-- PyTorch 2.4.1 and torchvision 0.19.1
-- transformers 4.40.2
-- NumPy 1.24.4, pandas 2.0.3, scikit-learn 1.3.2
-- Pillow 10.4.0, tensorboardX 2.6.2.2, PyYAML 6.0.3, tqdm 4.70.0
-
-One possible installation is:
+The paper experiments use PyTorch 2.4.1, CUDA 12.1, and NVIDIA RTX 4090 GPUs.
+The compact release was checked with Python 3.8.20 and the versions pinned in
+`requirements.txt`.
 
 ```bash
-conda create -n scrd python=3.8 -y
-conda activate scrd
+conda create -n rdr python=3.8 -y
+conda activate rdr
 
 pip install torch==2.4.1 torchvision==0.19.1 \
   --index-url https://download.pytorch.org/whl/cu121
-pip install transformers==4.40.2 numpy==1.24.4 pandas==2.0.3 \
-  scikit-learn==1.3.2 pillow==10.4.0 tensorboardX==2.6.2.2 \
-  PyYAML==6.0.3 tqdm==4.70.0
+pip install -r requirements.txt
 ```
 
-The first run downloads the pretrained `bert-base-uncased` and ResNet-18
-weights. In an offline environment, download them in advance and make them
-available through the corresponding Hugging Face and PyTorch caches.
+Training currently requires an NVIDIA GPU. On first use, Transformers downloads
+`bert-base-uncased`; prepare the corresponding local cache in an offline
+environment.
 
 ## Dataset preparation
 
-The MVSA-S images and texts are **not distributed in this repository**. Please
-obtain the relabeled MVSA data from the
-[dataset link used by the original project](https://pan.baidu.com/s/14HxGf1xwUhuOmGOJAN-iDA?pwd=3yzs)
-(access code: `3yzs`) and comply with the dataset's terms of use.
+MVSA-S is not distributed in this repository. Obtain the processed/relabeled
+MVSA data from the
+[dataset link used by SCRD](https://pan.baidu.com/s/14HxGf1xwUhuOmGOJAN-iDA?pwd=3yzs)
+(access code: `3yzs`) and follow its terms of use.
 
-Place the files outside the Git repository, for example:
+Expected layout:
 
 ```text
 /path/to/MVSA-Single/
@@ -81,8 +129,8 @@ Place the files outside the Git repository, for example:
     └── ...
 ```
 
-`train.json` and `test.json` must each be a JSON object keyed by sample ID. A
-minimal record is:
+`train.json` and `test.json` are JSON objects keyed by sample ID. A minimal
+record is:
 
 ```json
 {
@@ -94,120 +142,174 @@ minimal record is:
 }
 ```
 
-The loader reads the image from `data/<sample_id>.jpg` and the text from
-`data/<sample_id>.txt`. Alternatively, a record may contain an `image` filename
-and a `text` string directly. `img_label` and `text_label` are optional for
-training; when omitted, they default to `label`.
+The loader reads `data/<sample_id>.jpg` and `data/<sample_id>.txt`. A record may
+instead contain an `image` filename and an inline `text` field. `img_label` and
+`text_label` are optional and default to `label`.
 
-The label mapping used in this repository is:
+The repository uses `positive = 0`, `negative = 1`, and `neutral = 2`.
 
-| ID | Sentiment |
-|---:|---|
-| 0 | positive |
-| 1 | negative |
-| 2 | neutral |
+### The nominal 200-label setting
 
-Before training, check that both annotation files and the referenced image/text
-files are present. Sample IDs must be unique, and IDs used by a labeled split
-must occur in `train.json`.
+Following the SCRD implementation, balanced selection uses 67 samples per
+class, so the runnable argument is `--num_labels 201`. In this README, *n=200*
+denotes the paper's nominal budget and 201 denotes the implementation count.
 
-## Run the MVSA-S n=200 experiment
+If no ID file is supplied, the code samples a balanced labeled subset using
+`--seed`. For a fixed fold, create a text file with one `train.json` sample ID
+per line and pass it with `--labeled_ids_path`:
 
-Set `DATA_ROOT` to the absolute dataset directory and run from the repository
-root:
+```text
+splits/mvsa_s_n200/fold0/labeled_ids.txt
+```
+
+## Generate offline semantic evidence
+
+The training code never calls an MLLM directly. Generate the tri-view evidence
+bank once, save it as JSONL, and then reuse the same file for all matched runs.
+
+### Qwen3.5-Omni used in the paper
 
 ```bash
 export DATA_ROOT=/path/to/MVSA-Single
+export EVIDENCE_FILE=./evidence/mvsa_s_qwen35_omni.jsonl
+export DASHSCOPE_API_KEY=your_api_key
 
+python tools/generate_qwen35_omni_tri_sentiment_v2.py \
+  --data_dir "$DATA_ROOT/data" \
+  --out_file "$EVIDENCE_FILE" \
+  --model qwen3.5-omni-plus \
+  --overwrite \
+  --print_distribution
+```
+
+Resume an interrupted generation job with `--resume` instead of `--overwrite`.
+The tool also accepts `--api_key_file`; API-key files, `.env` files, evidence,
+and outputs are excluded by `.gitignore`.
+
+### Optional GLM-4.6V robustness run
+
+```bash
+export ZAI_API_KEY=your_api_key
+
+python tools/generate_glm46v_tri_sentiment_v2.py \
+  --data_dir "$DATA_ROOT/data" \
+  --out_file ./evidence/mvsa_s_glm46v.jsonl \
+  --model glm-4.6v \
+  --overwrite
+```
+
+These commands send dataset images/text to a third-party API and may incur
+costs. Review the dataset license, provider terms, and privacy requirements
+before running them. Never commit an API key.
+
+## Train RDR on MVSA-S n=200
+
+The following command exposes the paper's fixed RDR parameters explicitly:
+
+```bash
 CUDA_VISIBLE_DEVICES=0 python main.py \
   --dataset mvsa-s \
   --data_dir "$DATA_ROOT" \
   --train_data_dir "$DATA_ROOT" \
   --test_data_dir "$DATA_ROOT" \
   --gpu 0 \
-  --save_dir ./outputs/mvsa_s_n200/seed42 \
-  --save_name main \
+  --save_dir ./outputs/mvsa_s_n200/fold0 \
+  --save_name rdr \
   --overwrite \
   --num_labels 201 \
   --num_classes 3 \
-  --epoch 200 \
+  --epoch 500 \
   --num_train_iter 512 \
   --seed 42 \
   --batch_size 2 \
   --uratio 4 \
   --eval_batch_size 128 \
   --num_workers 1 \
-  --lr 1e-4 \
   --optim SGD \
+  --lr 1e-4 \
   --momentum 0.9 \
   --weight_decay 5e-4 \
   --threshold 0.95 \
   --p_cutoff 0.95 \
-  --ulb_loss_ratio 1.0 \
-  --lam_c 3 \
-  --lam_d 3 \
-  --use_mllm_verification 0
+  --use_mllm_verification true \
+  --mllm_evidence_path "$EVIDENCE_FILE" \
+  --mllm_verify_mode mm \
+  --mllm_verify_policy risky_only \
+  --mllm_action hybrid_cerw \
+  --mllm_missing_policy pass \
+  --mllm_label_map positive:0,negative:1,neutral:2 \
+  --risk_margin_threshold 0.20 \
+  --risk_kl_threshold 0.50 \
+  --hybrid_support_high 0.65 \
+  --hybrid_support_low 0.30 \
+  --mllm_ecs_conf_threshold 0.75 \
+  --hybrid_qwen_conf_high 0.75 \
+  --use_sa_dd true \
+  --sa_dd_version v2 \
+  --lambda_sa_dd 0.01 \
+  --sa_dd_history_momentum 0.90 \
+  --sa_dd_min_history_stability 0.60 \
+  --sa_dd_min_aug_stability 0.60 \
+  --sa_dd_v2_stability_temperature 0.10
 ```
 
-If `--labeled_ids_path` is omitted, the code samples 67 labeled examples from
-each class using `--seed` and stores the sampled indices with the run outputs.
-This command reproduces the **training protocol**, but a newly sampled subset
-is not guaranteed to reproduce the exact reported five-fold number.
-
-### Exact labeled split
-
-For an exact run, provide the labeled sample IDs used by that fold:
-
-```text
-splits/mvsa_s_n200/fold0/labeled_ids.txt
-```
-
-The file contains one `train.json` sample ID per line and 201 non-empty lines in
-total. Add the following argument to the command above:
+For a fixed split, append:
 
 ```bash
 --labeled_ids_path splits/mvsa_s_n200/fold0/labeled_ids.txt
 ```
 
-For five-fold evaluation, repeat the run with the five fixed ID lists and use a
-different output directory for every fold. Report the mean and variation of the
-five test accuracies. The fixed ID lists are small metadata files and do not
-contain images or text, so they should be published with the code whenever the
-dataset license permits. Without the original five ID lists, the experiment is
-**protocol-reproducible but not split-identical**.
+The parameter mapping follows the manuscript:
+`τ_mar=0.20`, `τ_aug=0.50`, `τ_sup=0.65`, `τ_con=0.30`,
+`τ_ext=0.75`, `μ=0.90`, `τ_s=0.60`, `T_s=0.10`, and
+`λ_RAD=0.01`. No test-set statistic should be used to tune these values.
+
+To obtain a clean validation-selected local run, add a deterministic validation
+split and evaluate the test set only once:
+
+```bash
+--val_ratio 0.1 \
+--val_seed 42 \
+--split_dir splits/mvsa_s_val10_seed42 \
+--eval_on_test_final_only true
+```
+
+This local validation split is useful for new experiments but is not a
+replacement for the paper's five predefined SCRD splits.
 
 ## Outputs
 
-For the command above, outputs are written to:
+The example run writes to `outputs/mvsa_s_n200/fold0/rdr/`. It contains the
+training log, `model_best.pth`, evaluation summaries, per-class metrics,
+confusion matrices, and pseudo-label diagnostics.
 
-```text
-outputs/mvsa_s_n200/seed42/main/
-```
-
-The directory contains the training log, the sampled-label indices, and
-`model_best.pth`. Evaluation logs report top-1 accuracy, macro-F1, weighted-F1,
-per-class precision/recall/F1, and the confusion matrix.
-
-## Notes on reproducibility
-
-- Keep `train.json` and `test.json` unchanged; JSON membership and insertion
-  order affect sample indexing.
-- Record the labeled ID list, random seed, package versions, GPU model, and CUDA
-  version for each run.
-- Small numerical differences across CUDA, cuDNN, GPU, and PyTorch versions are
-  expected even when deterministic seeds are enabled.
-- Do not commit the MVSA-S images or texts unless their license explicitly
-  permits redistribution.
+For five-split reporting, repeat the run with all five fixed labeled-ID files
+and separate output directories, then report the mean and standard deviation of
+the five test accuracies. Preserve the split IDs, evidence-bank checksum, seed,
+package versions, GPU, CUDA, and cuDNN versions with each run.
 
 ## Citation
 
-If this code is useful in your research, please cite:
+The bibliographic venue information will be updated after publication. For the
+current manuscript, use:
+
+```bibtex
+@misc{luo2026role,
+  author = {Luo, Zhen and Qian, Wenhua},
+  title  = {Role-Dependent Reliability for Semi-Supervised Image--Text Sentiment Analysis},
+  year   = {2026},
+  note   = {Manuscript}
+}
+```
+
+RDR uses SCRD as its backbone. Please also cite the original SCRD paper when
+using this repository.
 
 ```bibtex
 @inproceedings{xia2025seek,
   author    = {Xia, Wuyou and Jia, Guoli and Zhao, Sicheng and Yang, Jufeng},
   title     = {Seek Common Ground While Reserving Differences: Semi-Supervised Image-Text Sentiment Recognition},
-  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
   pages     = {29601--29611},
   year      = {2025}
 }
@@ -215,4 +317,5 @@ If this code is useful in your research, please cite:
 
 ## License
 
-This project is released under the [Apache License 2.0](./LICENSE).
+Released under the [Apache License 2.0](LICENSE). Dataset and third-party model
+licenses remain with their respective owners.
