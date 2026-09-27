@@ -1,0 +1,15 @@
+# Core training environment (Python 3.8, CUDA 12.1)
+torch==2.4.1
+torchvision==0.19.1
+transformers==4.40.2
+numpy==1.24.4
+pandas==2.0.3
+scikit-learn==1.3.2
+Pillow==10.4.0
+tensorboardX==2.6.2.2
+PyYAML==6.0.3
+tqdm==4.70.0
+
+# Optional offline MLLM evidence generation
+openai==2.2.0
+zai-sdk==0.2.3

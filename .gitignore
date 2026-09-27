@@ -1,0 +1,27 @@
+# Python and editor artifacts
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+.DS_Store
+
+# Local environments and secrets
+.env
+.env.*
+API_Key.json
+
+# Datasets and pretrained assets
+dataset/
+datasets_local/
+MVSA-Single/
+bert-base*/
+
+# Generated evidence, checkpoints, and experiment outputs
+**/evidence/*.jsonl
+**/evidence/*.bak_*
+saved_models*/
+checkpoints/
+outputs/
+logs/
+data_statistics/
+visualize/
