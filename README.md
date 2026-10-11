@@ -177,7 +177,7 @@ export DASHSCOPE_API_KEY=your_api_key
 python tools/generate_qwen35_omni_tri_sentiment_v2.py \
   --data_dir "$DATA_ROOT/data" \
   --out_file "$EVIDENCE_FILE" \
-  --model qwen3.5-omni-plus \
+  --model qwen3.5-omni-flash \
   --overwrite \
   --print_distribution
 ```
